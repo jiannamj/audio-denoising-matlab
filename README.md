@@ -1,4 +1,5 @@
-# audio-denoising-matlabABOUT THE PROJECT:
+# audio-denoising-matlab
+ABOUT THE PROJECT:
 ● The project focuses on removing unwanted noise from audio signals to improve clarity using wavelet thresholding.
 ● The MATLAB script applies wavelet decomposition and soft thresholding to filter out noise from a noisy audio signal.
 ● This is used in various applications , such as music production, speech recognition, and hearing aids, where clear audio is essential.
