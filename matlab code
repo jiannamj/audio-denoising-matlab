@@ -1,0 +1,71 @@
+clc; close all; clear all;
+% Step 1: Load user audio file
+[filename, pathname] = uigetfile({'.wav'; '.mp3'}, 'Select Audio File');
+if isequal(filename, 0)
+    disp('User cancelled the operation.');
+    return;
+end
+% Read the audio file
+[y, fs] = audioread(fullfile(pathname, filename));
+% Step 2: Play the original audio
+disp('Playing original audio...');
+sound(y, fs);
+pause(length(y) / fs + 1); % Wait for the audio to finish playing
+% Step 3: Add noise to the audio signal
+noise_level = 0.015; % Adjust this value for more or less noise
+noise = noise_level * randn(size(y)); % Generate white Gaussian noise
+noisy_audio = y + noise;
+% Step 4: Play the noisy audio
+disp('Playing noisy audio...');
+sound(noisy_audio, fs);
+pause(length(noisy_audio) / fs + 1); % Wait for the audio to finish playing
+% Step 5: Denoise the audio using wavelet thresholding
+wname = 'db8'; % Choose a wavelet (Daubechies wavelet)
+lev = 5; % Level of decomposition
+noisy_audio_vector = noisy_audio(:); % Convert noisy_audio to a vector
+[c, l] = wavedec(noisy_audio_vector, lev, wname); % Wavelet decomposition
+% Estimate noise standard deviation
+sigma = median(abs(c)) / 0.6745; % Median absolute deviation
+% Dynamic threshold adjustment based on noise level
+if noise_level > 0.03
+    thr = sigma * sqrt(2 * log(length(noisy_audio_vector))) * 1.5;  %Increase threshold for higher noise
+else
+    thr = sigma * sqrt(2 * log(length(noisy_audio_vector))); % Standard threshold
+end
+% Soft thresholding
+c_denoised = wthresh(c, 's', thr); % Apply soft thresholding
+% Reconstruct the denoised signal
+denoised_audio_vector = waverec(c_denoised, l, wname);
+denoised_audio = reshape(denoised_audio_vector, size(noisy_audio)); %Reshape to match original size
+% Step 6: Normalize and adjust gain of the denoised audio
+denoised_audio = denoised_audio / max(abs(denoised_audio)); % Normalize to -1 to 1
+gain_factor = 3; % Adjust this value for desired loudness
+denoised_audio = denoised_audio * gain_factor; % Apply gain
+denoised_audio = min(max(denoised_audio, -1), 1); % Clip to prevent distortion
+% Step 7: Play the denoised audio
+disp('Playing denoised audio...');
+sound(denoised_audio, fs);
+pause(length(denoised_audio) / fs + 1); % Wait for the audio to finish
+playing
+% Step 8: Plot the audio signals in separate figures
+figure;
+plot(y);
+title('Original Audio');
+xlabel('Samples');
+ylabel('Amplitude');
+figure;
+plot(noisy_audio);
+title('Noisy Audio');
+xlabel('Samples');
+ylabel('Amplitude');
+figure;
+plot(denoised_audio);
+title('Denoised Audio');
+xlabel('Samples');
+ylabel('Amplitude');
+% Optional: Save the denoised audio
+save_option = input('To save the denoised audio, type yes.', 's');
+if lower(save_option) == 'yes'
+    audiowrite(fullfile(pathname, 'denoised_audio.wav'), denoised_audio, fs);
+    disp('Denoised audio saved as "denoised_audio.wav".');
+end
